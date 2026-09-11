@@ -1,0 +1,123 @@
+:root {
+  color-scheme: light;
+
+  /* Surfaces — white / warm gray, muted industry palette */
+  --bg: #f5f6f7;
+  --surface: #ffffff;
+  --surface-2: #fafafb;
+  --surface-3: #f2f3f5;
+
+  /* Borders */
+  --border: #e5e7ea;
+  --border-strong: #d3d6db;
+
+  /* Ink */
+  --ink: #2c313a;
+  --ink-2: #5a616e;
+  --ink-3: #8b909c;
+  --ink-inverse: #ffffff;
+
+  /* Accent — muted slate blue */
+  --accent: #5f8bb5;
+  --accent-ink: #3c6389;
+  --accent-weak: #eef3f8;
+  --accent-border: #cfe0ee;
+
+  /* Sequential ramp for magnitude bars (light -> dark, one hue) */
+  --seq-1: #e7eef4;
+  --seq-2: #c9dae8;
+  --seq-3: #a6c2d9;
+  --seq-4: #7ea6c6;
+  --seq-5: #5f8bb5;
+  --seq-6: #46708f;
+
+  /* Status — muted, reserved. Each: fg + bg */
+  --st-waiting-fg: #9a7327;
+  --st-waiting-bg: #f5eede;
+  --st-tosend-fg: #5c6b82;
+  --st-tosend-bg: #eceff4;
+  --st-sent-fg: #45708f;
+  --st-sent-bg: #e7f0f6;
+  --st-accepted-fg: #4d7a5c;
+  --st-accepted-bg: #e6f0e9;
+  --st-declined-fg: #9c5f5f;
+  --st-declined-bg: #f3e7e7;
+
+  /* Feedback */
+  --good-fg: #4d7a5c;
+  --warn-fg: #9a7327;
+  --bad-fg: #9c5f5f;
+
+  /* Shape */
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgba(24, 29, 37, 0.04), 0 1px 3px rgba(24, 29, 37, 0.06);
+
+  /* Type */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg: #14161a;
+  --surface: #1c1f25;
+  --surface-2: #20242b;
+  --surface-3: #262b33;
+
+  /* Borders */
+  --border: #2e333c;
+  --border-strong: #3c424d;
+
+  /* Ink */
+  --ink: #e6e8ec;
+  --ink-2: #a8adb8;
+  --ink-3: #757b87;
+  --ink-inverse: #14161a;
+
+  /* Accent — muted slate blue, lifted for dark surface */
+  --accent: #6f9dc7;
+  --accent-ink: #9cc2e0;
+  --accent-weak: #23303c;
+  --accent-border: #35506a;
+
+  /* Sequential ramp (dark -> light on dark surface, one hue) */
+  --seq-1: #263640;
+  --seq-2: #314c5e;
+  --seq-3: #3d647d;
+  --seq-4: #4d7f9d;
+  --seq-5: #689ec2;
+  --seq-6: #8fbcd9;
+
+  /* Status — muted, reserved. Each: fg + bg */
+  --st-waiting-fg: #d9b877;
+  --st-waiting-bg: #37301f;
+  --st-tosend-fg: #a9b4c6;
+  --st-tosend-bg: #2a2f38;
+  --st-sent-fg: #8fc0dc;
+  --st-sent-bg: #1f2f3a;
+  --st-accepted-fg: #8fc7a2;
+  --st-accepted-bg: #1f3327;
+  --st-declined-fg: #d99f9f;
+  --st-declined-bg: #372626;
+
+  /* Feedback */
+  --good-fg: #8fc7a2;
+  --warn-fg: #d9b877;
+  --bad-fg: #d99f9f;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+}
