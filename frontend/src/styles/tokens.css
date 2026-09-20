@@ -31,6 +31,18 @@
   --seq-5: #5f8bb5;
   --seq-6: #46708f;
 
+  /* Categorical (identity) — fixed 8-slot order, validated for CVD/contrast.
+     Only used where series identity is the point (e.g. stacked-by-category
+     charts); magnitude/ranking bars stay on the single sequential hue above. */
+  --cat-1: #2a78d6;
+  --cat-2: #eb6834;
+  --cat-3: #1baf7a;
+  --cat-4: #eda100;
+  --cat-5: #e87ba4;
+  --cat-6: #008300;
+  --cat-7: #4a3aa7;
+  --cat-8: #e34948;
+
   /* Status — muted, reserved. Each: fg + bg */
   --st-waiting-fg: #9a7327;
   --st-waiting-bg: #f5eede;
@@ -101,6 +113,16 @@
   --seq-4: #4d7f9d;
   --seq-5: #689ec2;
   --seq-6: #8fbcd9;
+
+  /* Categorical (identity) — same eight hues, stepped for the dark surface */
+  --cat-1: #3987e5;
+  --cat-2: #d95926;
+  --cat-3: #199e70;
+  --cat-4: #c98500;
+  --cat-5: #d55181;
+  --cat-6: #008300;
+  --cat-7: #9085e9;
+  --cat-8: #e66767;
 
   /* Status — muted, reserved. Each: fg + bg */
   --st-waiting-fg: #d9b877;

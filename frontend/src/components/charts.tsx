@@ -155,6 +155,71 @@ export function DonutBreakdown({
 }
 
 /**
+ * Stacked columns, part-to-whole over time. Category order is fixed (never
+ * re-sorted per period — color identity must stay put), each period's total
+ * is direct-labelled above its column, and a legend carries the eight
+ * category colors since that's the dependable identity channel (a hover
+ * title on each segment supplements it, never replaces it).
+ */
+export function StackedPeriodChart<K extends string>({
+  periods,
+  categories,
+  labelMap,
+  colorMap,
+}: {
+  periods: { period: string; values: Record<K, number> }[];
+  categories: K[];
+  labelMap: Record<K, string>;
+  colorMap: Record<K, string>;
+}) {
+  const totals = periods.map((p) =>
+    categories.reduce((sum, c) => sum + (p.values[c] ?? 0), 0),
+  );
+  const max = Math.max(1, ...totals);
+
+  return (
+    <div className="stacked-chart">
+      <div className="stacked-cols">
+        {periods.map((p, i) => (
+          <div className="stacked-col" key={p.period}>
+            <div className="stacked-col-total">{totals[i]}</div>
+            <div className="stacked-col-track">
+              <div
+                className="stacked-bar"
+                style={{ height: `${(totals[i] / max) * 100}%` }}
+              >
+                {categories.map((c) =>
+                  p.values[c] > 0 ? (
+                    <div
+                      key={c}
+                      className="stacked-seg"
+                      style={{
+                        flex: p.values[c],
+                        background: colorMap[c],
+                      }}
+                      title={`${labelMap[c]}: ${p.values[c]}`}
+                    />
+                  ) : null,
+                )}
+              </div>
+            </div>
+            <div className="stacked-col-label">{p.period}</div>
+          </div>
+        ))}
+      </div>
+      <ul className="donut-legend stacked-legend">
+        {categories.map((c) => (
+          <li key={c}>
+            <span className="sw" style={{ background: colorMap[c] }} />
+            <span className="lg-label">{labelMap[c]}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
  * Status funnel — pipeline order left fixed (not sorted by count), muted
  * status fills, count + label inside each segment.
  */

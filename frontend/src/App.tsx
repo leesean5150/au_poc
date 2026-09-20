@@ -10,9 +10,10 @@ import { InvitationsPage } from "./pages/InvitationsPage";
 import { InvitationDetailPage } from "./pages/InvitationDetailPage";
 import { HostsPage } from "./pages/HostsPage";
 import { HostDetailPage } from "./pages/HostDetailPage";
+import { LoginPage } from "./pages/LoginPage";
 
 const NAV = [
-  { to: "/", label: "Dashboard", end: true },
+  { to: "/admin", label: "Dashboard", end: true },
   { to: "/invitations", label: "Invitations" },
   { to: "/guests", label: "Guests" },
   { to: "/hosts", label: "Hosts" },
@@ -20,6 +21,11 @@ const NAV = [
 
 export function App() {
   const { pathname } = useLocation();
+
+  if (pathname === "/") {
+    return <LoginPage />;
+  }
+
   const showEventSwitcher = !pathname.startsWith("/guests");
   return (
     <EventProvider>
@@ -54,7 +60,7 @@ export function App() {
           </div>
 
           <Routes>
-            <Route path="/" element={<DashboardPage />} />
+            <Route path="/admin" element={<DashboardPage />} />
             <Route path="/guests" element={<GuestsPage />} />
             <Route path="/guests/:id" element={<GuestDetailPage />} />
             <Route path="/invitations" element={<InvitationsPage />} />
@@ -64,7 +70,7 @@ export function App() {
             />
             <Route path="/hosts" element={<HostsPage />} />
             <Route path="/hosts/:id" element={<HostDetailPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </main>
       </div>

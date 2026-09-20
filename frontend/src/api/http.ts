@@ -1,5 +1,7 @@
 /* Low-level HTTP for the typed API client. No React, no fetch in components. */
 
+import { getToken } from "../lib/auth";
+
 const BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000/api";
 
 export class ApiError extends Error {
@@ -24,9 +26,14 @@ export function qs(params: Record<string, unknown> = {}): string {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {}),
+    },
   });
 
   if (!res.ok) {

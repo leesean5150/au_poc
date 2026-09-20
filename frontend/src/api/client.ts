@@ -13,6 +13,7 @@ import type {
   Person,
   PersonRow,
   StatsOverview,
+  TokenOut,
 } from "./types";
 
 /* ------------------------------------------------------------------ *
@@ -20,6 +21,13 @@ import type {
  * the backend contract. Components never call these directly — the
  * hooks in `src/hooks/` wrap them with TanStack Query.
  * ------------------------------------------------------------------ */
+
+export function login(email: string, password: string): Promise<TokenOut> {
+  return apiFetch(`/auth/login`, {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
 
 export function listInvitations(q: InvitationQuery = {}): Promise<Page<Invitation>> {
   return apiFetch(`/invitations${qs({ ...q })}`);

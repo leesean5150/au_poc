@@ -138,6 +138,11 @@ export interface StatsOverview {
   guests_by_type: Record<string, number>;
 }
 
+export interface TokenOut {
+  access_token: string;
+  token_type: string;
+}
+
 export interface HostRow extends Host {
   guest_count: number;
   by_status: Record<string, number>;
