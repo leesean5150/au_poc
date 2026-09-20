@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.pagination import Page, PageParams, page_params
-from app.core.schemas import PersonOut
+from app.core.schemas import GuestProfileOut
 from app.features.people.repository import PeopleRepository
 from app.features.people.schemas import (
     PersonDetail,
@@ -34,13 +34,13 @@ def list_people(
     return service.list_people(filters, page)
 
 
-@router.get("/{person_id}", response_model=PersonDetail)
-def get_person(service: ServiceDep, person_id: int) -> PersonDetail:
-    return service.get_person(person_id)
+@router.get("/{user_id}", response_model=PersonDetail)
+def get_person(service: ServiceDep, user_id: int) -> PersonDetail:
+    return service.get_person(user_id)
 
 
-@router.patch("/{person_id}", response_model=PersonOut)
+@router.patch("/{user_id}", response_model=GuestProfileOut)
 def patch_person(
-    service: ServiceDep, person_id: int, patch: PersonPatch
-) -> PersonOut:
-    return service.update_person(person_id, patch)
+    service: ServiceDep, user_id: int, patch: PersonPatch
+) -> GuestProfileOut:
+    return service.update_person(user_id, patch)

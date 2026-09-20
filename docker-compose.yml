@@ -23,6 +23,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://crm:crm@db:5432/crm}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       APP_NOW: ${APP_NOW:-}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-480}
     ports:
       - "8000:8000"
     volumes:

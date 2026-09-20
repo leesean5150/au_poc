@@ -2,12 +2,12 @@ import { apiFetch, qs } from "./http";
 import { APP_NOW } from "../lib/format";
 import type {
   EventRecord,
-  Guest,
-  GuestQuery,
-  GuestStatus,
   Host,
   HostRow,
   HostsQuery,
+  Invitation,
+  InvitationQuery,
+  InvitationStatus,
   Page,
   PeopleQuery,
   Person,
@@ -21,19 +21,19 @@ import type {
  * hooks in `src/hooks/` wrap them with TanStack Query.
  * ------------------------------------------------------------------ */
 
-export function listGuests(q: GuestQuery = {}): Promise<Page<Guest>> {
-  return apiFetch(`/guests${qs({ ...q })}`);
+export function listInvitations(q: InvitationQuery = {}): Promise<Page<Invitation>> {
+  return apiFetch(`/invitations${qs({ ...q })}`);
 }
 
-export function getGuest(id: string): Promise<Guest> {
-  return apiFetch(`/guests/${id}`);
+export function getInvitation(id: string): Promise<Invitation> {
+  return apiFetch(`/invitations/${id}`);
 }
 
-export function patchGuestStatus(
+export function patchInvitationStatus(
   id: string,
-  status: GuestStatus,
-): Promise<Guest> {
-  return apiFetch(`/guests/${id}`, {
+  status: InvitationStatus,
+): Promise<Invitation> {
+  return apiFetch(`/invitations/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
@@ -49,7 +49,7 @@ export function listPeople(q: PeopleQuery = {}): Promise<Page<PersonRow>> {
 
 export function getPerson(
   id: string,
-): Promise<{ person: Person; invitations: Guest[] }> {
+): Promise<{ person: Person; invitations: Invitation[] }> {
   return apiFetch(`/people/${id}`);
 }
 
@@ -60,7 +60,7 @@ export function listHosts(q: HostsQuery = {}): Promise<Page<HostRow>> {
 export function getHost(
   id: string,
   eventId?: string,
-): Promise<{ host: Host; invitations: Guest[] }> {
+): Promise<{ host: Host; invitations: Invitation[] }> {
   return apiFetch(`/hosts/${id}${qs({ event_id: eventId })}`);
 }
 
@@ -71,7 +71,17 @@ export function statsOverview(eventId?: string): Promise<StatsOverview> {
 /* ----------------------------- display helpers ------------------------------ */
 
 export function host_name(h: Host): string {
-  return [h.first_name, h.last_name].filter(Boolean).join(" ") || "(unnamed)";
+  return (
+    [h.user.first_name, h.user.last_name].filter(Boolean).join(" ") ||
+    "(unnamed)"
+  );
+}
+
+export function person_name(p: Person): string {
+  return (
+    [p.user.first_name, p.user.last_name].filter(Boolean).join(" ") ||
+    "(unnamed)"
+  );
 }
 
 export function nowLabel(): string {

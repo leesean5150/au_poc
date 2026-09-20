@@ -7,16 +7,18 @@ from app.config import get_settings
 from app.core import models  # noqa: F401  (register tables before create_all)
 from app.core.db import Base, engine
 from app.core.errors import install_error_handlers
+from app.features.auth.router import router as auth_router
 from app.features.events.router import router as events_router
-from app.features.guests.router import router as guests_router
 from app.features.hosts.router import router as hosts_router
 from app.features.imports.router import router as imports_router
+from app.features.invitations.router import router as invitations_router
 from app.features.people.router import router as people_router
 from app.features.stats.router import router as stats_router
 from app.seed import seed
 
 ROUTERS = (
-    guests_router,
+    auth_router,
+    invitations_router,
     people_router,
     hosts_router,
     events_router,

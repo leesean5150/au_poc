@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { GuestStatus } from "../api/types";
+import type { InvitationStatus } from "../api/types";
 import { STATUS_LABEL } from "../lib/format";
 
 /* ---------------------------- Card ---------------------------- */
@@ -61,7 +61,7 @@ export function Badge({
   return <span className={`badge ${className}`}>{children}</span>;
 }
 
-export function StatusBadge({ status }: { status: GuestStatus }) {
+export function StatusBadge({ status }: { status: InvitationStatus }) {
   return (
     <Badge className={`badge-status-${status}`}>
       <span className="dot" />

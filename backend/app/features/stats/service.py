@@ -65,7 +65,7 @@ class StatsService:
                 invitations, lambda i: i.host.department
             ),
             guests_by_type=self._group(
-                invitations, lambda i: i.person.guest_type
+                invitations, lambda i: i.guest.guest_type
             ),
         )
 
@@ -112,7 +112,6 @@ class StatsService:
             name=first.name,
             starts_on=first.starts_on,
             days_until=(first.starts_on - today).days,
-            event_type=first.event_type,
         )
         rows = [
             UpcomingEvent(

@@ -12,6 +12,9 @@ dependencies = [
     "pydantic-settings>=2.5",
     "python-multipart>=0.0.12",
     "openpyxl>=3.1",
+    "python-dateutil>=2.9",
+    "pyjwt>=2.9",
+    "bcrypt>=4.1",
 ]
 
 [dependency-groups]

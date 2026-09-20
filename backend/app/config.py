@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     app_now: str = ""  # optional ISO date to freeze "today" for the countdown
     data_file: str = "/data/Aus_Guest_List_Augmented_v3.xlsx"
+    jwt_secret: str
+    jwt_expires_minutes: int = 480
 
     @property
     def cors_origin_list(self) -> list[str]:

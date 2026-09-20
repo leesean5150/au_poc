@@ -28,10 +28,10 @@ def list_hosts(
     return service.list_hosts(filters, page)
 
 
-@router.get("/{host_id}", response_model=HostDetail)
+@router.get("/{host_user_id}", response_model=HostDetail)
 def get_host(
     service: ServiceDep,
-    host_id: int,
+    host_user_id: int,
     event_id: Annotated[int | None, Query()] = None,
 ) -> HostDetail:
-    return service.get_host(host_id, event_id)
+    return service.get_host(host_user_id, event_id)

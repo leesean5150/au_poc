@@ -1,6 +1,6 @@
-import type { GuestStatus, GuestType } from "../api/types";
+import type { GuestType, InvitationStatus } from "../api/types";
 
-export const STATUS_ORDER: GuestStatus[] = [
+export const STATUS_ORDER: InvitationStatus[] = [
   "waiting_for_information",
   "to_send_invite",
   "invite_sent",
@@ -8,7 +8,7 @@ export const STATUS_ORDER: GuestStatus[] = [
   "declined",
 ];
 
-export const STATUS_LABEL: Record<GuestStatus, string> = {
+export const STATUS_LABEL: Record<InvitationStatus, string> = {
   waiting_for_information: "Waiting for info",
   to_send_invite: "To send invite",
   invite_sent: "Invite sent",
@@ -31,14 +31,14 @@ export const GUEST_TYPE_LABEL: Record<GuestType, string> = {
  * verdict. Each bar is also text- and value-labelled, so colour is never the
  * only signal.
  */
-export const STATUS_FILL: Record<GuestStatus, string> = {
+export const STATUS_FILL: Record<InvitationStatus, string> = {
   waiting_for_information: "var(--st-waiting-fg)",
   to_send_invite: "var(--st-tosend-fg)",
   invite_sent: "var(--st-sent-fg)",
   accepted: "var(--st-accepted-fg)",
   declined: "var(--st-declined-fg)",
 };
-export const STATUS_INK: Record<GuestStatus, string> = {
+export const STATUS_INK: Record<InvitationStatus, string> = {
   waiting_for_information: "var(--st-waiting-fg)",
   to_send_invite: "var(--st-tosend-fg)",
   invite_sent: "var(--st-sent-fg)",

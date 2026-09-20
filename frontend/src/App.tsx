@@ -6,21 +6,21 @@ import { nowLabel } from "./api/client";
 import { DashboardPage } from "./pages/DashboardPage";
 import { GuestsPage } from "./pages/GuestsPage";
 import { GuestDetailPage } from "./pages/GuestDetailPage";
-import { PeoplePage } from "./pages/PeoplePage";
-import { PersonDetailPage } from "./pages/PersonDetailPage";
+import { InvitationsPage } from "./pages/InvitationsPage";
+import { InvitationDetailPage } from "./pages/InvitationDetailPage";
 import { HostsPage } from "./pages/HostsPage";
 import { HostDetailPage } from "./pages/HostDetailPage";
 
 const NAV = [
   { to: "/", label: "Dashboard", end: true },
+  { to: "/invitations", label: "Invitations" },
   { to: "/guests", label: "Guests" },
-  { to: "/people", label: "People" },
   { to: "/hosts", label: "Hosts" },
 ];
 
 export function App() {
   const { pathname } = useLocation();
-  const showEventSwitcher = !pathname.startsWith("/people");
+  const showEventSwitcher = !pathname.startsWith("/guests");
   return (
     <EventProvider>
       <div className="app">
@@ -56,9 +56,12 @@ export function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/guests" element={<GuestsPage />} />
-            <Route path="/guests/:invitationId" element={<GuestDetailPage />} />
-            <Route path="/people" element={<PeoplePage />} />
-            <Route path="/people/:id" element={<PersonDetailPage />} />
+            <Route path="/guests/:id" element={<GuestDetailPage />} />
+            <Route path="/invitations" element={<InvitationsPage />} />
+            <Route
+              path="/invitations/:invitationId"
+              element={<InvitationDetailPage />}
+            />
             <Route path="/hosts" element={<HostsPage />} />
             <Route path="/hosts/:id" element={<HostDetailPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

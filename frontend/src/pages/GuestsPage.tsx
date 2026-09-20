@@ -1,30 +1,16 @@
 import { useNavigate } from "react-router-dom";
-import { host_name } from "../api/client";
-import type { Guest, GuestStatus, GuestType } from "../api/types";
-import { useGuests } from "../hooks";
-import { useEventContext } from "../lib/eventContext";
+import type { PersonRow } from "../api/types";
+import { usePeople } from "../hooks";
 import { useUrlState } from "../lib/useUrlState";
 import { PageHeader } from "../components/PageHeader";
-import { Card, Loading, StatusBadge } from "../components/primitives";
+import { Card, Loading } from "../components/primitives";
 import { DataTable, type Column } from "../components/DataTable";
-import { FilterBar, Pagination, SearchInput, Select } from "../components/controls";
-import {
-  GUEST_TYPE_LABEL,
-  STATUS_LABEL,
-  STATUS_ORDER,
-  dash,
-  fmtDate,
-} from "../lib/format";
+import { FilterBar, Pagination, SearchInput } from "../components/controls";
+import { GUEST_TYPE_LABEL, dash } from "../lib/format";
 
 const PAGE_SIZE = 10;
-const FACET_PAGE_SIZE = 200;
 
 const DEFAULTS = {
-  status: "",
-  guest_type: "",
-  department: "",
-  registration_type: "",
-  compliance_approved: "",
   search: "",
   sort: "name",
   order: "asc",
@@ -33,48 +19,27 @@ const DEFAULTS = {
 
 export function GuestsPage() {
   const nav = useNavigate();
-  const { activeEventId } = useEventContext();
   const { state, set, reset } = useUrlState(DEFAULTS);
+  const { data, isPending } = usePeople({
+    search: state.search || undefined,
+    sort: state.sort,
+    order: state.order as "asc" | "desc",
+    page: Number(state.page),
+    page_size: PAGE_SIZE,
+  });
 
-  // Facet values for the dropdowns (unfiltered, this event).
-  const { data: all } = useGuests(
-    { event_id: activeEventId, page_size: FACET_PAGE_SIZE },
-    { enabled: !!activeEventId },
-  );
-  const departments = uniq(all?.items.map((g) => g.host.department));
-  const regTypes = uniq(all?.items.map((g) => g.registration_type));
-
-  const { data, isPending } = useGuests(
-    {
-      event_id: activeEventId,
-      status: (state.status || undefined) as GuestStatus | undefined,
-      guest_type: (state.guest_type || undefined) as GuestType | undefined,
-      department: state.department || undefined,
-      registration_type: state.registration_type || undefined,
-      compliance_approved:
-        (state.compliance_approved || undefined) as
-          | "yes"
-          | "no"
-          | "pending"
-          | undefined,
-      search: state.search || undefined,
-      sort: state.sort,
-      order: state.order as "asc" | "desc",
-      page: Number(state.page),
-      page_size: PAGE_SIZE,
-    },
-    { enabled: !!activeEventId },
-  );
-
-  const columns: Column<Guest>[] = [
+  const columns: Column<PersonRow>[] = [
     {
       key: "name",
       header: "Guest",
       sortable: true,
-      render: (g) => (
+      render: (p) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{g.full_name}</div>
-          <div className="muted mono">{dash(g.person.work_email)}</div>
+          <div style={{ fontWeight: 600 }}>
+            {[p.user.first_name, p.user.last_name].filter(Boolean).join(" ") ||
+              "—"}
+          </div>
+          <div className="muted mono">{dash(p.user.email)}</div>
         </div>
       ),
     },
@@ -82,42 +47,32 @@ export function GuestsPage() {
       key: "company",
       header: "Company",
       sortable: true,
-      render: (g) => dash(g.person.company),
+      render: (p) => dash(p.company),
+    },
+    {
+      key: "job_title",
+      header: "Job title",
+      sortable: true,
+      render: (p) => dash(p.job_title),
     },
     {
       key: "guest_type",
       header: "Type",
       sortable: true,
-      render: (g) => GUEST_TYPE_LABEL[g.person.guest_type],
+      render: (p) => GUEST_TYPE_LABEL[p.guest_type],
     },
     {
-      key: "host",
-      header: "Host",
+      key: "city",
+      header: "City",
       sortable: true,
-      render: (g) => (
-        <div>
-          <div>{host_name(g.host)}</div>
-          <div className="muted">{dash(g.host.department)}</div>
-        </div>
-      ),
+      render: (p) => dash(p.city_of_residence),
     },
     {
-      key: "registration_type",
-      header: "Reg. type",
+      key: "invitation_count",
+      header: "Invitations",
+      align: "right",
       sortable: true,
-      render: (g) => dash(g.registration_type),
-    },
-    {
-      key: "check_in_date",
-      header: "Check-in",
-      sortable: true,
-      render: (g) => fmtDate(g.check_in_date),
-    },
-    {
-      key: "status",
-      header: "Status",
-      sortable: true,
-      render: (g) => <StatusBadge status={g.status} />,
+      render: (p) => p.invitation_count,
     },
   ];
 
@@ -125,56 +80,15 @@ export function GuestsPage() {
     <div className="stack">
       <PageHeader
         title="Guests"
-        subtitle="Every invitation for the selected event"
+        subtitle="Everyone who has been invited, across all events"
       />
-
       <FilterBar onReset={reset}>
         <SearchInput
           value={state.search}
           onChange={(v) => set({ search: v, page: "1" })}
-        />
-        <Select
-          label="Status"
-          value={state.status}
-          onChange={(v) => set({ status: v, page: "1" })}
-          options={STATUS_ORDER.map((s) => ({
-            value: s,
-            label: STATUS_LABEL[s],
-          }))}
-        />
-        <Select
-          label="Type"
-          value={state.guest_type}
-          onChange={(v) => set({ guest_type: v, page: "1" })}
-          options={Object.entries(GUEST_TYPE_LABEL).map(([value, label]) => ({
-            value,
-            label,
-          }))}
-        />
-        <Select
-          label="Department"
-          value={state.department}
-          onChange={(v) => set({ department: v, page: "1" })}
-          options={departments.map((d) => ({ value: d, label: d }))}
-        />
-        <Select
-          label="Reg. type"
-          value={state.registration_type}
-          onChange={(v) => set({ registration_type: v, page: "1" })}
-          options={regTypes.map((d) => ({ value: d, label: d }))}
-        />
-        <Select
-          label="Compliance"
-          value={state.compliance_approved}
-          onChange={(v) => set({ compliance_approved: v, page: "1" })}
-          options={[
-            { value: "yes", label: "Approved" },
-            { value: "no", label: "Rejected" },
-            { value: "pending", label: "Pending" },
-          ]}
+          placeholder="Name, email, company…"
         />
       </FilterBar>
-
       <Card pad={false} title={data ? `${data.total} guests` : "Guests"}>
         {isPending || !data ? (
           <Loading />
@@ -183,8 +97,8 @@ export function GuestsPage() {
             <DataTable
               columns={columns}
               rows={data.items}
-              getRowKey={(g) => g.id}
-              onRowClick={(g) => nav(`/guests/${g.id}`)}
+              getRowKey={(p) => p.user.id}
+              onRowClick={(p) => nav(`/guests/${p.user.id}`)}
               sort={{
                 field: state.sort,
                 order: state.order as "asc" | "desc",
@@ -204,8 +118,4 @@ export function GuestsPage() {
       </Card>
     </div>
   );
-}
-
-function uniq(xs: (string | null | undefined)[] | undefined): string[] {
-  return [...new Set((xs ?? []).filter((x): x is string => !!x))].sort();
 }

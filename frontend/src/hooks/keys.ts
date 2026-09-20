@@ -1,13 +1,13 @@
-import type { GuestQuery, HostsQuery, PeopleQuery } from "../api/types";
+import type { HostsQuery, InvitationQuery, PeopleQuery } from "../api/types";
 
 /** Central query-key factory so invalidation stays consistent. */
 export const qk = {
   events: ["events"] as const,
   stats: (eventId?: string) => ["stats", "overview", eventId ?? null] as const,
-  guests: {
-    all: ["guests"] as const,
-    list: (q: GuestQuery) => ["guests", "list", q] as const,
-    detail: (id: string) => ["guests", "detail", id] as const,
+  invitations: {
+    all: ["invitations"] as const,
+    list: (q: InvitationQuery) => ["invitations", "list", q] as const,
+    detail: (id: string) => ["invitations", "detail", id] as const,
   },
   people: {
     all: ["people"] as const,

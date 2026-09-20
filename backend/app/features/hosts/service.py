@@ -1,6 +1,6 @@
 from app.core.errors import NotFoundError
 from app.core.pagination import Page, PageParams
-from app.core.schemas import GuestOut, HostOut
+from app.core.schemas import HostProfileOut, InvitationOut
 from app.features.hosts.repository import HostRepository
 from app.features.hosts.schemas import HostDetail, HostFilters, HostRow
 
@@ -21,13 +21,13 @@ class HostService:
             page_size=page.page_size,
         )
 
-    def get_host(self, host_id: int, event_id: int | None) -> HostDetail:
-        host = self.repo.get(host_id)
+    def get_host(self, host_user_id: int, event_id: int | None) -> HostDetail:
+        host = self.repo.get(host_user_id)
         if host is None:
-            raise NotFoundError(f"host {host_id} not found")
+            raise NotFoundError(f"host {host_user_id} not found")
         scoped = self.repo.resolve_event_id(event_id)
-        invitations = self.repo.invitations_for(host_id, scoped)
+        invitations = self.repo.invitations_for(host_user_id, scoped)
         return HostDetail(
-            host=HostOut.model_validate(host),
-            invitations=[GuestOut.model_validate(i) for i in invitations],
+            host=HostProfileOut.model_validate(host),
+            invitations=[InvitationOut.model_validate(i) for i in invitations],
         )

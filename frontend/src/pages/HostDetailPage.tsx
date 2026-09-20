@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { host_name } from "../api/client";
-import type { Guest } from "../api/types";
+import type { Invitation } from "../api/types";
 import { useHost } from "../hooks";
 import { useEventContext } from "../lib/eventContext";
 import { BackButton, Breadcrumb } from "../components/PageHeader";
@@ -26,22 +26,22 @@ export function HostDetailPage() {
   const { host: h, invitations } = data;
   const name = host_name(h);
 
-  const columns: Column<Guest>[] = [
+  const columns: Column<Invitation>[] = [
     {
       key: "name",
       header: "Guest",
       render: (g) => (
         <div>
           <div style={{ fontWeight: 600 }}>{g.full_name}</div>
-          <div className="muted mono">{dash(g.person.work_email)}</div>
+          <div className="muted mono">{dash(g.guest.user.email)}</div>
         </div>
       ),
     },
-    { key: "company", header: "Company", render: (g) => dash(g.person.company) },
+    { key: "company", header: "Company", render: (g) => dash(g.guest.company) },
     {
       key: "type",
       header: "Type",
-      render: (g) => GUEST_TYPE_LABEL[g.person.guest_type],
+      render: (g) => GUEST_TYPE_LABEL[g.guest.guest_type],
     },
     {
       key: "status",
@@ -65,7 +65,7 @@ export function HostDetailPage() {
           items={[
             {
               label: "Email",
-              value: <span className="mono">{dash(h.email)}</span>,
+              value: <span className="mono">{dash(h.user.email)}</span>,
             },
             { label: "Department", value: dash(h.department) },
             { label: "City", value: dash(h.city_of_residence) },
@@ -79,7 +79,7 @@ export function HostDetailPage() {
           columns={columns}
           rows={invitations}
           getRowKey={(g) => g.id}
-          onRowClick={(g) => nav(`/guests/${g.id}`)}
+          onRowClick={(g) => nav(`/invitations/${g.id}`)}
           empty="No guests for this host at the selected event"
         />
       </Card>

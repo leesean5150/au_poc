@@ -1,109 +1,104 @@
-"""Idempotent seed: import the bundled xlsx when the DB has no invitations,
-then mock a few standalone future events (with a handful of guests re-invited)
-so the dashboard's upcoming-events box and cross-event history have content.
+"""Idempotent seed: import the bundled xlsx when the DB has no invitations —
+each row's own "Allocated Tennis Session" label produces its event, so no
+synthetic event data is fabricated here. Also seeds the RBAC tables (roles)
+and a handful of demo login accounts so the JWT/RBAC path can be exercised
+without a registration flow.
 """
 
 from __future__ import annotations
 
 import sys
-from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.core.db import SessionLocal
-from app.core.models import Event, Host, Invitation, Person
+from app.core.models import AdminProfile, GuestProfile, HostProfile, Invitation, Role, User, UserRole
+from app.core.security import hash_password
 from app.features.imports.importer import import_workbook
 
-# Standalone events, all dated after APP_NOW (2026-01-05) so they surface as
-# "upcoming". No hierarchy — every event is first-class.
-EXTRA_EVENTS = [
+# Seeded roles — kept coarse; new permissions/finer roles are added when a
+# concrete need for them shows up, not speculatively.
+ROLES = ["super_admin", "ops_admin", "host", "guest"]
+
+# POC-only demo accounts so the JWT/RBAC path can be exercised end-to-end.
+# Bulk-imported guests/hosts get no password (see importer.py) — these three
+# are the only accounts that can actually log in.
+DEMO_PASSWORD = "password123"
+DEMO_ACCOUNTS = [
     {
-        "name": "Sydney Broker Roadshow",
-        "event_type": "conference",
-        "starts_on": date(2026, 2, 24),
-        "ends_on": date(2026, 2, 25),
-        "location": "Sydney",
+        "email": "demo.admin@poc.local",
+        "first_name": "Demo",
+        "last_name": "Admin",
+        "role": "super_admin",
+        "profile": AdminProfile,
     },
     {
-        "name": "Brisbane Client Golf Day",
-        "event_type": "experience",
-        "starts_on": date(2026, 3, 19),
-        "ends_on": None,
-        "location": "Brisbane",
+        "email": "demo.host@poc.local",
+        "first_name": "Demo",
+        "last_name": "Host",
+        "role": "host",
+        "profile": HostProfile,
     },
     {
-        "name": "Perth Partner Dinner",
-        "event_type": "dinner",
-        "starts_on": date(2026, 5, 7),
-        "ends_on": None,
-        "location": "Perth",
+        "email": "demo.guest@poc.local",
+        "first_name": "Demo",
+        "last_name": "Guest",
+        "role": "guest",
+        "profile": GuestProfile,
     },
 ]
-
-# event name -> [(person_index, host_index)] into the id-ordered people / hosts.
-# Overlaps across events on purpose, so some people gain a real invite history.
-EXTRA_INVITES: dict[str, list[tuple[int, int]]] = {
-    "Sydney Broker Roadshow": [(0, 0), (1, 1), (2, 2), (3, 3), (4, 0), (5, 1), (6, 2), (7, 3)],
-    "Brisbane Client Golf Day": [(4, 4), (5, 5), (6, 6), (8, 7), (10, 8)],
-    "Perth Partner Dinner": [(1, 0), (3, 2), (5, 4), (7, 6)],
-}
-
-_STATUSES = ["accepted", "invite_sent", "to_send_invite", "waiting_for_information"]
 
 
 def seed(*, force: bool = False) -> None:
     settings = get_settings()
     with SessionLocal() as db:
+        _seed_roles(db)
+        _seed_demo_accounts(db)
         existing = db.scalar(select(func.count()).select_from(Invitation)) or 0
         if existing and not force:
-            print(f"[seed] {existing} invitations present — skipping")
+            db.commit()
+            print(f"[seed] {existing} invitations present — skipping xlsx import")
             return
         result = import_workbook(db, settings.data_file)
-        _seed_extra_events(db)
         db.commit()
         print(f"[seed] {result}")
 
 
-def _seed_extra_events(db: Session) -> None:
-    people = list(db.scalars(select(Person).order_by(Person.id)))
-    hosts = list(db.scalars(select(Host).order_by(Host.id)))
-    if not people or not hosts:
-        return
+def _seed_roles(db: Session) -> None:
+    for name in ROLES:
+        if db.scalar(select(Role).where(Role.name == name)) is None:
+            db.add(Role(name=name))
+    db.flush()
 
-    for spec in EXTRA_EVENTS:
-        event = db.scalar(select(Event).where(Event.name == spec["name"]))
-        if event is None:
-            event = Event(**spec)
-            db.add(event)
+
+def _seed_demo_accounts(db: Session) -> None:
+    for spec in DEMO_ACCOUNTS:
+        user = db.scalar(select(User).where(User.email == spec["email"]))
+        if user is None:
+            user = User(
+                email=spec["email"],
+                first_name=spec["first_name"],
+                last_name=spec["last_name"],
+                password_hash=hash_password(DEMO_PASSWORD),
+                status="active",
+            )
+            db.add(user)
             db.flush()
 
-        for n, (person_idx, host_idx) in enumerate(EXTRA_INVITES[spec["name"]]):
-            person = people[person_idx % len(people)]
-            host = hosts[host_idx % len(hosts)]
-            already = db.scalar(
-                select(Invitation).where(
-                    Invitation.person_id == person.id,
-                    Invitation.event_id == event.id,
-                )
-            )
-            if already is not None:
-                continue
-            db.add(
-                Invitation(
-                    person=person,
-                    host=host,
-                    event=event,
-                    registration_type="A-Generic",
-                    status=_STATUSES[n % len(_STATUSES)],
-                    compliance_approved={0: True, 1: False}.get(n % 3),
-                    requires_flights=True,
-                    flight_class="economy",
-                    requires_accommodation=True,
-                    requires_airport_transfer=(n % 2 == 0),
-                )
-            )
+            profile_cls = spec["profile"]
+            if profile_cls is GuestProfile:
+                db.add(GuestProfile(user_id=user.id, guest_type="staff"))
+            elif profile_cls is HostProfile:
+                db.add(HostProfile(user_id=user.id, department="Executive"))
+            else:
+                db.add(AdminProfile(user_id=user.id))
+
+        role = db.scalar(select(Role).where(Role.name == spec["role"]))
+        if role is not None and db.get(UserRole, (user.id, role.id)) is None:
+            db.add(UserRole(user_id=user.id, role_id=role.id))
+    db.flush()
 
 
 if __name__ == "__main__":

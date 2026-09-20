@@ -57,7 +57,7 @@ export function HostsPage() {
       render: (h) => (
         <div>
           <div style={{ fontWeight: 600 }}>{host_name(h)}</div>
-          <div className="muted mono">{dash(h.email)}</div>
+          <div className="muted mono">{dash(h.user.email)}</div>
         </div>
       ),
     },
@@ -122,8 +122,8 @@ export function HostsPage() {
             <DataTable
               columns={columns}
               rows={data.items}
-              getRowKey={(h) => h.id}
-              onRowClick={(h) => nav(`/hosts/${h.id}`)}
+              getRowKey={(h) => h.user.id}
+              onRowClick={(h) => nav(`/hosts/${h.user.id}`)}
               sort={{
                 field: state.sort,
                 order: state.order as "asc" | "desc",

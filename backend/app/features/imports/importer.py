@@ -1,8 +1,17 @@
 """xlsx -> DB rows. Single source of truth for the spreadsheet mapping.
 
-Upsert order: event -> people -> hosts -> invitations.
-People dedupe on lowercased ``work_email``; hosts on lowercased ``email``.
-Unknown categorical values round-trip rather than raising.
+Upsert order: users/guest_profiles -> users/host_profiles -> event ->
+invitations, per row (each row's event is derived from its own "Allocated
+Tennis Session" label). Guests and hosts dedupe on lowercased email against
+the shared ``users`` table. Unknown categorical values round-trip rather
+than raising.
+
+This importer is a legacy porting tool for the source spreadsheet's free-text
+session label and is allowed to be fragile about that one column: if any
+row's label can't be parsed into a date, the whole import raises
+``SessionParseError`` and nothing is committed (see ``import_workbook`` — the
+raise happens before the trailing ``db.commit()``, so the caller's session
+rolls back the entire batch rather than importing a partial file).
 """
 
 from __future__ import annotations
@@ -11,35 +20,37 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import BinaryIO
 
+from dateutil import parser as dateutil_parser
 from openpyxl import load_workbook
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.models import Event, Host, Invitation, Person
+from app.core.models import Event, GuestProfile, HostProfile, Invitation, User
 
 SHEET_NAME = "Aus Guest List"
+COL_SESSION = "Allocated Tennis Session"
 
-DEFAULT_EVENT: dict[str, object] = {
-    "name": "Melbourne Hospitality Event",
-    "starts_on": date(2026, 1, 18),
-    "ends_on": date(2026, 1, 20),
-    "location": "Melbourne",
-}
+
+class SessionParseError(ValueError):
+    """Raised when a row's Allocated Tennis Session label has no parseable date."""
+
 
 # --- spreadsheet column -> model field ---------------------------------------
-PERSON_COLUMNS = {
-    "Title": "title",
+GUEST_USER_COLUMNS = {
     "Guest First Name": "first_name",
     "Guest Last Name": "last_name",
-    "Work Email": "work_email",
+}
+GUEST_PROFILE_COLUMNS = {
+    "Title": "title",
     "Company": "company",
     "Job Title": "job_title",
     "Guest City of Residence": "city_of_residence",
 }
-HOST_COLUMNS = {
+HOST_USER_COLUMNS = {
     "Host First Name": "first_name",
     "Host Last Name": "last_name",
-    "Host Email Address": "email",
+}
+HOST_PROFILE_COLUMNS = {
     "Host's City of Residence": "city_of_residence",
     "Department": "department",
 }
@@ -49,7 +60,6 @@ INVITATION_TEXT_COLUMNS = {
     "Group Name": "group_name",
     "Business Case for Invite": "business_case",
     "Departure City": "departure_city",
-    "Allocated Tennis Session": "allocated_tennis_session",
     "Workshop/Conference": "workshop",
     "Additional Experience": "additional_experience",
     "Email of Internal Contact Who Will manage Sightseeing Activity": (
@@ -150,14 +160,7 @@ class ImportResult:
     skipped: int = 0
 
 
-def import_workbook(
-    db: Session,
-    source: str | BinaryIO,
-    *,
-    event_name: str | None = None,
-    event_starts_on: date | None = None,
-    event_ends_on: date | None = None,
-) -> ImportResult:
+def import_workbook(db: Session, source: str | BinaryIO) -> ImportResult:
     wb = load_workbook(source, read_only=True, data_only=True)
     ws = wb[SHEET_NAME] if SHEET_NAME in wb.sheetnames else wb[wb.sheetnames[0]]
 
@@ -165,11 +168,9 @@ def import_workbook(
     header = [(_text(cell) or "") for cell in next(rows)]
 
     result = ImportResult()
-    people: dict[str, Person] = {}
-    hosts: dict[str, Host] = {}
-
-    event = _upsert_event(db, event_name, event_starts_on, event_ends_on)
-    db.flush()
+    guests: dict[str, GuestProfile] = {}
+    hosts: dict[str, HostProfile] = {}
+    events: dict[str, Event] = {}
 
     for raw in rows:
         record = dict(zip(header, raw, strict=False))
@@ -177,84 +178,132 @@ def import_workbook(
             result.skipped += 1
             continue
 
-        person = _upsert_person(db, record, people, result)
+        # Fragile by design (legacy porting tool) — but an unparseable label
+        # aborts the whole import rather than silently skipping/mis-filing
+        # a row, so nothing is committed on a partial failure.
+        session_name, session_date = _parse_session(record.get(COL_SESSION))
+
+        guest = _upsert_guest(db, record, guests, result)
         host = _upsert_host(db, record, hosts, result)
+        event = _upsert_event(db, events, session_name, session_date)
         db.flush()
-        _upsert_invitation(db, record, person, host, event, result)
+        _upsert_invitation(db, record, guest, host, event, result)
 
     db.commit()
     return result
 
 
+def _parse_session(label: object) -> tuple[str, date]:
+    """A row's raw "Allocated Tennis Session" text is used verbatim as the
+    Event.name (e.g. "Monday 19 Jan Day Session") and fuzzy-parsed for its
+    date. Raises SessionParseError if the label is blank or has no
+    recognizable date — the caller must not catch this per-row; it's meant
+    to fail the whole import.
+    """
+    name = _text(label)
+    if name is None:
+        raise SessionParseError("row has no Allocated Tennis Session label")
+    try:
+        parsed = dateutil_parser.parse(name, fuzzy=True)
+    except (ValueError, OverflowError) as exc:
+        raise SessionParseError(
+            f"could not parse a date out of Allocated Tennis Session {name!r}"
+        ) from exc
+    return name, parsed.date()
+
+
 def _upsert_event(
-    db: Session,
-    name: str | None,
-    starts_on: date | None,
-    ends_on: date | None,
+    db: Session, cache: dict[str, Event], name: str, starts_on: date
 ) -> Event:
-    name = (name or "").strip() or str(DEFAULT_EVENT["name"])
-    event = db.scalar(select(Event).where(Event.name == name))
+    event = cache.get(name)
     if event is None:
-        event = Event(
-            name=name,
-            event_type="main",
-            starts_on=starts_on or DEFAULT_EVENT["starts_on"],
-            ends_on=ends_on or DEFAULT_EVENT["ends_on"],
-            location=str(DEFAULT_EVENT["location"]),
-        )
-        db.add(event)
-    else:
-        if starts_on:
-            event.starts_on = starts_on
-        if ends_on:
-            event.ends_on = ends_on
+        event = db.scalar(select(Event).where(Event.name == name))
+        if event is None:
+            event = Event(name=name, starts_on=starts_on, location="Melbourne")
+            db.add(event)
+            db.flush()
+        cache[name] = event
     return event
 
 
-def _upsert_person(
-    db: Session, record: dict, cache: dict[str, Person], result: ImportResult
-) -> Person:
+def _upsert_user(db: Session, email: str, fields: dict) -> User:
+    user = db.scalar(select(User).where(User.email == email))
+    if user is None:
+        user = User(email=email, password_hash=None, status="active", **fields)
+        db.add(user)
+        db.flush()
+    else:
+        for key, value in fields.items():
+            setattr(user, key, value)
+    return user
+
+
+def _upsert_guest(
+    db: Session, record: dict, cache: dict[str, GuestProfile], result: ImportResult
+) -> GuestProfile:
     email = _key(record.get("Work Email"))
     assert email is not None  # guarded by caller
 
-    fields = {dst: _text(record.get(src)) for src, dst in PERSON_COLUMNS.items()}
-    fields["work_email"] = email
-    fields["guest_type"] = GUEST_TYPE_MAP.get(
+    user_fields = {dst: _text(record.get(src)) for src, dst in GUEST_USER_COLUMNS.items()}
+    profile_fields = {
+        dst: _text(record.get(src)) for src, dst in GUEST_PROFILE_COLUMNS.items()
+    }
+    profile_fields["guest_type"] = GUEST_TYPE_MAP.get(
         _key(record.get(COL_GUEST_TYPE)) or "", _key(record.get(COL_GUEST_TYPE)) or "other"
     )
 
-    person = cache.get(email) or db.scalar(
-        select(Person).where(Person.work_email == email)
-    )
-    if person is None:
-        person = Person(**fields)
-        db.add(person)
-        result.people_created += 1
+    guest = cache.get(email)
+    if guest is None:
+        user = _upsert_user(db, email, user_fields)
+        guest = db.get(GuestProfile, user.id)
+        if guest is None:
+            guest = GuestProfile(user_id=user.id, **profile_fields)
+            db.add(guest)
+            result.people_created += 1
+        else:
+            for key, value in profile_fields.items():
+                setattr(guest, key, value)
+            result.people_updated += 1
     else:
-        for key, value in fields.items():
-            setattr(person, key, value)
+        for key, value in user_fields.items():
+            setattr(guest.user, key, value)
+        for key, value in profile_fields.items():
+            setattr(guest, key, value)
         result.people_updated += 1
-    cache[email] = person
-    return person
+    cache[email] = guest
+    return guest
 
 
 def _upsert_host(
-    db: Session, record: dict, cache: dict[str, Host], result: ImportResult
-) -> Host:
+    db: Session, record: dict, cache: dict[str, HostProfile], result: ImportResult
+) -> HostProfile:
     email = _key(record.get("Host Email Address"))
-    fields = {dst: _text(record.get(src)) for src, dst in HOST_COLUMNS.items()}
-    fields["email"] = email
+    user_fields = {dst: _text(record.get(src)) for src, dst in HOST_USER_COLUMNS.items()}
+    profile_fields = {
+        dst: _text(record.get(src)) for src, dst in HOST_PROFILE_COLUMNS.items()
+    }
 
-    lookup_key = email or f"__noemail__{fields.get('first_name')}_{fields.get('last_name')}"
+    lookup_key = email or f"__noemail__{user_fields.get('first_name')}_{user_fields.get('last_name')}"
     host = cache.get(lookup_key)
-    if host is None and email:
-        host = db.scalar(select(Host).where(Host.email == email))
     if host is None:
-        host = Host(**fields)
-        db.add(host)
-        result.hosts_created += 1
+        # No email to dedupe on across runs — still needs a users row.
+        lookup_email = email or (
+            f"__no-email__{user_fields.get('first_name')}."
+            f"{user_fields.get('last_name')}@unknown.local"
+        ).lower()
+        user = _upsert_user(db, lookup_email, user_fields)
+        host = db.get(HostProfile, user.id)
+        if host is None:
+            host = HostProfile(user_id=user.id, **profile_fields)
+            db.add(host)
+            result.hosts_created += 1
+        else:
+            for key, value in profile_fields.items():
+                setattr(host, key, value)
     else:
-        for key, value in fields.items():
+        for key, value in user_fields.items():
+            setattr(host.user, key, value)
+        for key, value in profile_fields.items():
             setattr(host, key, value)
     cache[lookup_key] = host
     return host
@@ -263,8 +312,8 @@ def _upsert_host(
 def _upsert_invitation(
     db: Session,
     record: dict,
-    person: Person,
-    host: Host,
+    guest: GuestProfile,
+    host: HostProfile,
     event: Event,
     result: ImportResult,
 ) -> Invitation:
@@ -286,15 +335,15 @@ def _upsert_invitation(
     )
 
     invitation = None
-    if person.id is not None:
+    if guest.user_id is not None:
         invitation = db.scalar(
             select(Invitation).where(
-                Invitation.person_id == person.id,
+                Invitation.guest_user_id == guest.user_id,
                 Invitation.event_id == event.id,
             )
         )
     if invitation is None:
-        invitation = Invitation(person=person, host=host, event=event, **fields)
+        invitation = Invitation(guest=guest, host=host, event=event, **fields)
         db.add(invitation)
         result.invitations_created += 1
     else:

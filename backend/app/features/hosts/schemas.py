@@ -1,18 +1,18 @@
 from pydantic import BaseModel
 
-from app.core.schemas import GuestOut, HostOut
+from app.core.schemas import HostProfileOut, InvitationOut
 
-__all__ = ["HostOut", "HostRow", "HostDetail", "HostFilters"]
+__all__ = ["HostProfileOut", "HostRow", "HostDetail", "HostFilters"]
 
 
-class HostRow(HostOut):
+class HostRow(HostProfileOut):
     guest_count: int
     by_status: dict[str, int]
 
 
 class HostDetail(BaseModel):
-    host: HostOut
-    invitations: list[GuestOut]
+    host: HostProfileOut
+    invitations: list[InvitationOut]
 
 
 class HostFilters(BaseModel):

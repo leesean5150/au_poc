@@ -1,6 +1,6 @@
 export type ID = string;
 
-export type GuestStatus =
+export type InvitationStatus =
   | "waiting_for_information"
   | "to_send_invite"
   | "invite_sent"
@@ -16,18 +16,17 @@ export type GuestType =
 
 export type FlightClass = "economy" | "business" | "first";
 export type TransferType = "group" | "private" | "individual";
-export type EventType =
-  | "main"
-  | "conference"
-  | "dinner"
-  | "experience";
 
-export interface Person {
+export interface UserIdentity {
   id: ID;
-  title: string | null;
   first_name: string | null;
   last_name: string | null;
-  work_email: string | null;
+  email: string;
+}
+
+export interface Person {
+  user: UserIdentity;
+  title: string | null;
   company: string | null;
   job_title: string | null;
   guest_type: GuestType;
@@ -35,10 +34,7 @@ export interface Person {
 }
 
 export interface Host {
-  id: ID;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
+  user: UserIdentity;
   city_of_residence: string | null;
   department: string | null;
 }
@@ -46,22 +42,22 @@ export interface Host {
 export interface EventRecord {
   id: ID;
   name: string;
-  event_type: EventType;
   starts_on: string;
   ends_on: string | null;
   location: string | null;
 }
 
+/** An invitation flattened with its guest, host and event. */
 export interface Invitation {
   id: ID;
-  person_id: ID;
-  host_id: ID;
+  guest_user_id: ID;
+  host_user_id: ID;
   event_id: ID;
   registration_type: string | null;
   group_name: string | null;
   business_case: string | null;
   compliance_approved: boolean | null;
-  status: GuestStatus;
+  status: InvitationStatus;
   requires_flights: boolean | null;
   flight_class: FlightClass | null;
   departure_city: string | null;
@@ -70,16 +66,11 @@ export interface Invitation {
   requires_accommodation: boolean | null;
   check_in_date: string | null;
   check_out_date: string | null;
-  allocated_tennis_session: string | null;
   workshop: string | null;
   additional_experience: string | null;
   sightseeing_contact_email: string | null;
   additional_information: string | null;
-}
-
-/** Flattened invitation as the tables/detail views consume it. */
-export interface Guest extends Invitation {
-  person: Person;
+  guest: Person;
   host: Host;
   event: EventRecord;
   full_name: string;
@@ -92,14 +83,14 @@ export interface Page<T> {
   page_size: number;
 }
 
-export interface GuestQuery {
+export interface InvitationQuery {
   event_id?: ID;
-  status?: GuestStatus;
+  status?: InvitationStatus;
   guest_type?: GuestType;
   registration_type?: string;
   department?: string;
-  host_id?: ID;
-  person_id?: ID;
+  host_user_id?: ID;
+  guest_user_id?: ID;
   compliance_approved?: "yes" | "no" | "pending";
   search?: string;
   sort?: string;
@@ -141,9 +132,7 @@ export interface StatsOverview {
     need_accommodation: number;
     need_transfer: number;
   };
-  next_event:
-    | { name: string; starts_on: string; days_until: number; event_type: EventType }
-    | null;
+  next_event: { name: string; starts_on: string; days_until: number } | null;
   upcoming_events: { name: string; starts_on: string; days_until: number }[];
   guests_by_department: Record<string, number>;
   guests_by_type: Record<string, number>;

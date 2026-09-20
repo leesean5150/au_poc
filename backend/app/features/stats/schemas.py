@@ -28,7 +28,6 @@ class NextEvent(BaseModel):
     name: str
     starts_on: date
     days_until: int
-    event_type: str
 
 
 class UpcomingEvent(BaseModel):

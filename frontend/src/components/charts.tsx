@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { GuestStatus } from "../api/types";
+import type { InvitationStatus } from "../api/types";
 import {
   STATUS_FILL,
   STATUS_INK,
@@ -168,7 +168,7 @@ export function StatusFunnel({
   const max = Math.max(1, ...STATUS_ORDER.map((s) => byStatus[s] ?? 0));
   return (
     <div className="funnel">
-      {STATUS_ORDER.map((s: GuestStatus) => {
+      {STATUS_ORDER.map((s: InvitationStatus) => {
         const v = byStatus[s] ?? 0;
         const pct = total ? Math.round((v / total) * 100) : 0;
         return (

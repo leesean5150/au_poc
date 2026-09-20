@@ -1,28 +1,28 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.core.schemas import GuestOut, PersonOut
+from app.core.schemas import GuestProfileOut, InvitationOut
 
-__all__ = ["PersonOut", "PersonRow", "PersonDetail", "PersonPatch", "PersonFilters"]
+__all__ = ["GuestProfileOut", "PersonRow", "PersonDetail", "PersonPatch", "PersonFilters"]
 
 
-class PersonRow(PersonOut):
+class PersonRow(GuestProfileOut):
     invitation_count: int
 
 
 class PersonDetail(BaseModel):
-    person: PersonOut
-    invitations: list[GuestOut]
+    person: GuestProfileOut
+    invitations: list[InvitationOut]
 
 
 class PersonPatch(BaseModel):
-    """Identity fields only — invitation fields are edited via PATCH /api/guests."""
+    """Identity fields — invitation fields are edited via PATCH /api/invitations."""
 
     model_config = ConfigDict(extra="forbid")
 
-    title: str | None = None
     first_name: str | None = None
     last_name: str | None = None
-    work_email: str | None = None
+    email: str | None = None
+    title: str | None = None
     company: str | None = None
     job_title: str | None = None
     guest_type: str | None = None
